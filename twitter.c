@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 // Structs
 typedef struct {
@@ -14,17 +15,25 @@ typedef struct {
     char conteudo[100];
 } Post;
 
-//Funcoes
+typedef struct {
+    char hashtag[20];
+    int count;
+} TrendingTopic;
+
+// Funcoes
 void limpar_buffer();
 int carregar_tamanho();
 void salvar_tamanho(int tamanho);
 void cadastrar_usuario(Cadastro *cadastros, int *tamanho, int *indice);
 void listar_usuarios(Cadastro *cadastros, int tamanho);
 int fazer_login(Cadastro *cadastros, int tamanho, char *usuario_logado);
-void fazer_post(char *usuario_logado);
+void fazer_post(char *usuario_logado, TrendingTopic *topics, int *num_topics);
 void ver_timeline();
+void exibir_trending_topics(TrendingTopic *topics, int num_topics);
+void adicionar_hashtag(char *conteudo, TrendingTopic *topics, int *num_topics);
 void menu_cadastro(Cadastro *cadastros, int *tamanho, int *indice);
-void menu_principal();
+void menu_principal(Cadastro *cadastros, int *tamanho, int *indice, TrendingTopic *topics, int *num_topics);
+int comparar_hashtags(const void *a, const void *b);
 
 // main
 int main() {
@@ -36,8 +45,11 @@ int main() {
         return 1;
     }
 
-    int indice = 0; // numero de usuarios cadastrados
-    menu_principal(cadastros, &tamanho, &indice); // inicia o menu
+    TrendingTopic topics[100];
+    int num_topics = 0;
+
+    int indice = 0; // número de usuários cadastrados
+    menu_principal(cadastros, &tamanho, &indice, topics, &num_topics); // inicia o menu
 
     free(cadastros);
     return 0;
@@ -48,7 +60,7 @@ void limpar_buffer() {
     while (getchar() != '\n');
 }
 
-//função para carregar o tamanho do arquivo
+// função para carregar o tamanho do arquivo
 int carregar_tamanho() {
     FILE *arquivo_tamanho = fopen("tamanho.txt", "r");
     int tamanho = 1;
@@ -74,7 +86,7 @@ void salvar_tamanho(int tamanho) {
     fclose(arquivo_tamanho);
 }
 
-//Cadastrar um novo usuário
+// Cadastrar um novo usuário
 void cadastrar_usuario(Cadastro *cadastros, int *tamanho, int *indice) {
     FILE *arquivos_dados = fopen("Dados Usuarios.txt", "a+");
 
@@ -113,7 +125,7 @@ void cadastrar_usuario(Cadastro *cadastros, int *tamanho, int *indice) {
     printf("Usuário cadastrado com sucesso!\n");
 }
 
-//listar todos os usuários cadastrados
+// Listar todos os usuários cadastrados
 void listar_usuarios(Cadastro *cadastros, int tamanho) {
     FILE *arquivos_dados = fopen("Dados Usuarios.txt", "r");
     if (arquivos_dados == NULL) {
@@ -165,8 +177,42 @@ int fazer_login(Cadastro *cadastros, int tamanho, char *usuario_logado) {
     return 0;
 }
 
+// Função para adicionar hashtags aos Trending Topics
+void adicionar_hashtag(char *conteudo, TrendingTopic *topics, int *num_topics) {
+    char hashtag[20];
+    int i = 0, j = 0;
+
+    while (conteudo[i] != '\0') {
+        if (conteudo[i] == '#') {
+            i++;
+            j = 0;
+
+            while (isalnum(conteudo[i]) || conteudo[i] == '_') {
+                hashtag[j++] = conteudo[i++];
+            }
+            hashtag[j] = '\0';
+
+            int found = 0;
+            for (int k = 0; k < *num_topics; k++) {
+                if (strcmp(topics[k].hashtag, hashtag) == 0) {
+                    topics[k].count++;
+                    found = 1;
+                    break;
+                }
+            }
+
+            if (!found) {
+                strcpy(topics[*num_topics].hashtag, hashtag);
+                topics[*num_topics].count = 1;
+                (*num_topics)++;
+            }
+        }
+        i++;
+    }
+}
+
 // Função para fazer um post
-void fazer_post(char *usuario_logado) {
+void fazer_post(char *usuario_logado, TrendingTopic *topics, int *num_topics) {
     FILE *arquivo_posts = fopen("Posts.txt", "a+");
 
     if (arquivo_posts == NULL) {
@@ -178,10 +224,13 @@ void fazer_post(char *usuario_logado) {
     strcpy(post.autor, usuario_logado);
 
     printf("\n=== Novo Post ===\n");
-    printf("Você escolheu fazer um post? se sim aperte Enter e escreva o que você está pensando!: ");
+    printf("Você escolheu fazer um post? Se sim, aperte Enter e escreva o que você está pensando!: ");
     limpar_buffer();
     fgets(post.conteudo, 100, stdin);
     post.conteudo[strcspn(post.conteudo, "\n")] = '\0';
+
+    // Adiciona hashtags aos trending topics
+    adicionar_hashtag(post.conteudo, topics, num_topics);
 
     fprintf(arquivo_posts, "%s: %s\n", post.autor, post.conteudo);
     fclose(arquivo_posts);
@@ -208,21 +257,38 @@ void ver_timeline() {
     fclose(arquivo_posts);
 }
 
-//menu de csdastro
+// Função para exibir os Trending Topics
+void exibir_trending_topics(TrendingTopic *topics, int num_topics) {
+    qsort(topics, num_topics, sizeof(TrendingTopic), comparar_hashtags);
+
+    printf("\n=== Trending Topics ===\n");
+    for (int i = 0; i < num_topics && i < 5; i++) {
+        printf("%s - %d\n", topics[i].hashtag, topics[i].count);
+    }
+}
+
+// Função para comparar hashtags para ordenação
+int comparar_hashtags(const void *a, const void *b) {
+    TrendingTopic *topicA = (TrendingTopic *)a;
+    TrendingTopic *topicB = (TrendingTopic *)b;
+    return topicB->count - topicA->count;
+}
+
+//menu de cadastro
 void menu_cadastro(Cadastro *cadastros, int *tamanho, int *indice) {
-    int resposta_menu_cadastro;
+    int resposta_cadastro;
 
     while (1) {
-        printf("\n+---------------------+\n");
-        printf("| 1 - Cadastrar       |\n");
-        printf("| 2 - Ver cadastrados |\n");
-        printf("| 3 - Voltar          |\n");
-        printf("+---------------------+\n");
-        printf("Digite a opção desejada: ");
-        scanf("%d", &resposta_menu_cadastro);
+        printf("\n+---------------------------+\n");
+        printf("| 1 - Cadastrar usuário     |\n");
+        printf("| 2 - Listar usuários       |\n");
+        printf("| 3 - Voltar                |\n");
+        printf("+---------------------------+\n");
+        printf("Selecione uma opção: ");
+        scanf("%d", &resposta_cadastro);
         limpar_buffer();
 
-        switch (resposta_menu_cadastro) {
+        switch (resposta_cadastro) {
             case 1:
                 cadastrar_usuario(cadastros, tamanho, indice);
                 break;
@@ -242,7 +308,7 @@ void menu_cadastro(Cadastro *cadastros, int *tamanho, int *indice) {
 }
 
 //menu principal
-void menu_principal(Cadastro *cadastros, int *tamanho, int *indice) {
+void menu_principal(Cadastro *cadastros, int *tamanho, int *indice, TrendingTopic *topics, int *num_topics) {
     int resposta_programa;
     char usuario_logado[15] = "";
     while (1) {
@@ -272,7 +338,7 @@ void menu_principal(Cadastro *cadastros, int *tamanho, int *indice) {
 
                         switch (opcao_usuario) {
                             case 1:
-                                fazer_post(usuario_logado);
+                                fazer_post(usuario_logado, topics, num_topics);
                                 break;
 
                             case 2:
