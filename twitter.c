@@ -4,7 +4,7 @@
 
 typedef struct{
     char login[15];
-    char senha[8];
+    char senha[15];
     char nome[15];
 }cadastro;
 
@@ -22,6 +22,11 @@ int main(){
     fscanf(arquivo_tamanho,"%d",&tamanho);
     fclose(arquivo_tamanho);
     
+    if(arquivo_tamanho==NULL){
+        tamanho=1;
+    }
+
+
     cadastro *cadastros=malloc(sizeof(cadastro)*tamanho);
     int resposta_interna,resposta_menu;
     int i=0;
@@ -51,9 +56,6 @@ int main(){
             printf("Bem vindo ao XYZ\n");
             
             
-    
-            //debug
-            //printf("tamanho: %d\n",tamanho);
             printf("Usuario: %d\nLimite: %d\n",i,tamanho);
 
 
@@ -70,19 +72,7 @@ int main(){
             //adiciona ao arquivo
             fprintf(arquivos_dados,"%s %s %s\n",cadastros[i].nome,cadastros[i].login,cadastros[i].senha);
             fclose(arquivos_dados);
-            //debug
-            // printf("\n");
-            // printf("Usuario cadastrado com sucesso !!\n");
-            // printf("\n");
-            // printf("Nome: %s\nLogin: %s\nSenha: %s\n",cadastros[i].nome,cadastros[i].login,cadastros[i].senha);
-            // printf("\n");
-            // printf("\n");
-        
-            
-            
-            
-            
-            
+    
             //alocacao usuario
             tamanho++;
             arquivo_tamanho=fopen("tamanho.txt","w+");
@@ -97,7 +87,6 @@ int main(){
             printf("cadastrar outro usuario ? ");
             scanf("%d",&resposta_interna);
             
-            printf("%d",resposta_interna);
             if(resposta_interna==1){
             
             //aumenta o tamanho em 1
@@ -112,7 +101,7 @@ int main(){
             i++;
             continue;
             }
-                else{break;}
+            else{break;}
                 
         
             
@@ -121,6 +110,9 @@ int main(){
         
 
     case 2: resposta_menu=2;
+        
+    while(1){
+    
         //abertura do arquivo tamanho
         arquivo_tamanho=fopen("tamanho.txt","r");
         //abertura do arquivo de dados
@@ -132,7 +124,7 @@ int main(){
         
         //ler os dados do arquivo
         int i=0;
-    while (i < tamanho && fscanf(arquivos_dados, "%s %s %s\n", cadastros[i].nome, cadastros[i].login, cadastros[i].senha) == 3) {
+    while ( i < tamanho && fscanf(arquivos_dados, "%s %s %s\n", cadastros[i].nome, cadastros[i].login, cadastros[i].senha) == 3) {
         i++;
     }
         
@@ -146,14 +138,15 @@ int main(){
     printf("\n=== Usuarios Cadastrados ===\n");
     
     //mostra os dados lidos
-    for (int j = 0; j < tamanho; j++) {
+    for (int j = 0; j < tamanho-1; j++) {
         printf("Usuario %d:\n", j );
         printf("Nome: %s\n", cadastros[j].nome);
         printf("Login: %s\n", cadastros[j].login);
         printf("Senha: %s\n\n", cadastros[j].senha);
     }
     fclose(arquivo_tamanho);
-    
+    break;
+}
     break;
     
         
