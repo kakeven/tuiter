@@ -79,7 +79,8 @@ int main(){
             fprintf(arquivo_tamanho,"%d",tamanho);
             fclose(arquivo_tamanho);
             
-            realloc(cadastros,tamanho);
+            cadastro *temp = realloc(cadastros, sizeof(cadastro) * tamanho);
+            cadastros=temp;
             
             
             
@@ -96,8 +97,8 @@ int main(){
             arquivo_tamanho=fopen("tamanho.txt","w+");
             fprintf(arquivo_tamanho,"%d",tamanho);
             fclose(arquivo_tamanho);
-            
-            realloc(cadastros,tamanho);
+            cadastro *temp = realloc(cadastros, sizeof(cadastro) * tamanho);
+            cadastros=temp;
             i++;
             continue;
             }
