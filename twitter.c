@@ -20,7 +20,13 @@ typedef struct {
     int count;
 } TrendingTopic;
 
+
 // Funcoes
+int comparar_hashtags(const void *a, const void *b) {
+    TrendingTopic *topicA = (TrendingTopic *)a;
+    TrendingTopic *topicB = (TrendingTopic *)b;
+    return topicB->count - topicA->count;  // Ordem decrescente
+}
 void limpar_buffer();
 int carregar_tamanho();
 void salvar_tamanho(int tamanho);
@@ -29,11 +35,57 @@ void listar_usuarios(Cadastro *cadastros, int tamanho);
 int fazer_login(Cadastro *cadastros, int tamanho, char *usuario_logado);
 void fazer_post(char *usuario_logado, TrendingTopic *topics, int *num_topics);
 void ver_timeline();
+
 void exibir_trending_topics(TrendingTopic *topics, int num_topics);
+
 void adicionar_hashtag(char *conteudo, TrendingTopic *topics, int *num_topics);
 void menu_cadastro(Cadastro *cadastros, int *tamanho, int *indice);
 void menu_principal(Cadastro *cadastros, int *tamanho, int *indice, TrendingTopic *topics, int *num_topics);
-int comparar_hashtags(const void *a, const void *b);
+void adicionar_hashtag(char *conteudo, TrendingTopic *topics, int *num_topics) {
+    char hashtag[20];
+    int i = 0, j = 0;
+
+    while (conteudo[i] != '\0') {
+        if (conteudo[i] == '#') {
+            i++;
+            j = 0;
+
+            while (isalnum(conteudo[i]) || conteudo[i] == '_') {
+                hashtag[j++] = conteudo[i++];
+            }
+            hashtag[j] = '\0';
+
+            int found = 0;
+            for (int k = 0; k < *num_topics; k++) {
+                if (strcmp(topics[k].hashtag, hashtag) == 0) {
+                    topics[k].count++;
+                    found = 1;
+                    break;
+                }
+            }
+
+            if (!found) {
+                strcpy(topics[*num_topics].hashtag, hashtag);
+                topics[*num_topics].count = 1;
+                (*num_topics)++;
+            }
+        }
+        i++;
+    }
+}
+
+void exibir_trending_topics(TrendingTopic *topics, int num_topics) {
+
+    
+    // Ordena as hashtags por número de ocorrências
+    qsort(topics, num_topics, sizeof(TrendingTopic), comparar_hashtags);
+
+    printf("\n=== Trending Topics ===\n");
+    for (int i = 0; i < num_topics && i < 5; i++) {  // Exibe as 5 mais populares
+        printf("%s - %d\n", topics[i].hashtag, topics[i].count);
+    }
+}
+
 
 // main
 int main() {
@@ -178,38 +230,6 @@ int fazer_login(Cadastro *cadastros, int tamanho, char *usuario_logado) {
 }
 
 // Função para adicionar hashtags aos Trending Topics
-void adicionar_hashtag(char *conteudo, TrendingTopic *topics, int *num_topics) {
-    char hashtag[20];
-    int i = 0, j = 0;
-
-    while (conteudo[i] != '\0') {
-        if (conteudo[i] == '#') {
-            i++;
-            j = 0;
-
-            while (isalnum(conteudo[i]) || conteudo[i] == '_') {
-                hashtag[j++] = conteudo[i++];
-            }
-            hashtag[j] = '\0';
-
-            int found = 0;
-            for (int k = 0; k < *num_topics; k++) {
-                if (strcmp(topics[k].hashtag, hashtag) == 0) {
-                    topics[k].count++;
-                    found = 1;
-                    break;
-                }
-            }
-
-            if (!found) {
-                strcpy(topics[*num_topics].hashtag, hashtag);
-                topics[*num_topics].count = 1;
-                (*num_topics)++;
-            }
-        }
-        i++;
-    }
-}
 
 // Função para fazer um post
 void fazer_post(char *usuario_logado, TrendingTopic *topics, int *num_topics) {
@@ -258,21 +278,9 @@ void ver_timeline() {
 }
 
 // Função para exibir os Trending Topics
-void exibir_trending_topics(TrendingTopic *topics, int num_topics) {
-    qsort(topics, num_topics, sizeof(TrendingTopic), comparar_hashtags);
 
-    printf("\n=== Trending Topics ===\n");
-    for (int i = 0; i < num_topics && i < 5; i++) {
-        printf("%s - %d\n", topics[i].hashtag, topics[i].count);
-    }
-}
 
 // Função para comparar hashtags para ordenação
-int comparar_hashtags(const void *a, const void *b) {
-    TrendingTopic *topicA = (TrendingTopic *)a;
-    TrendingTopic *topicB = (TrendingTopic *)b;
-    return topicB->count - topicA->count;
-}
 
 //menu de cadastro
 void menu_cadastro(Cadastro *cadastros, int *tamanho, int *indice) {
@@ -327,11 +335,12 @@ void menu_principal(Cadastro *cadastros, int *tamanho, int *indice, TrendingTopi
                 if (fazer_login(cadastros, *tamanho, usuario_logado)) {
                     int opcao_usuario;
                     while (1) {
-                        printf("\n+---------------------+\n");
-                        printf("| 1 - Fazer post      |\n");
-                        printf("| 2 - Ver timeline    |\n");
-                        printf("| 3 - Logout          |\n");
-                        printf("+---------------------+\n");
+                        printf("\n+-----------------------+\n");
+                        printf("| 1 - Fazer post          |\n");
+                        printf("| 2 - Ver timeline        |\n");
+                        printf("| 3 - ver trendings topics|\n");
+                        printf("| 4 - Logout              |\n");
+                        printf("+-------------------------+\n");
                         printf("Digite a opção desejada: ");
                         scanf("%d", &opcao_usuario);
                         limpar_buffer();
@@ -346,10 +355,14 @@ void menu_principal(Cadastro *cadastros, int *tamanho, int *indice, TrendingTopi
                                 break;
 
                             case 3:
-                                printf("Logout realizado.\n");
-                                strcpy(usuario_logado, "");
+                                exibir_trending_topics(topics, *num_topics);
                                 break;
-
+                            case 4:
+                            printf("Logout realizado.\n");
+                            strcpy(usuario_logado, "");
+                            break;
+                            
+                            
                             default:
                                 printf("Opção inválida! Tente novamente.\n");
                                 break;
